@@ -17,19 +17,23 @@ function orderExists(req, res, next) {
 };
 
 function orderHasCorrectProps(req, res, next) {
-    const { data: { deliverTo, mobileNumber, dishes, quantity }} = req.body;
+    const { data: { deliverTo, mobileNumber, dishes }} = req.body;
     if (!deliverTo || deliverTo == "")
         return next({ status: 400, message: `Order must include a deliverTo`});
     if (!mobileNumber || mobileNumber == "")
         return next({ status: 400, message: `Order must include a mobileNumber`});
     if (!dishes) 
         return next({ status: 400, message: `Order must include a dish`});
-    if (dishes !== Array || dishes == [])
-        return next({ status: 400, message: `Order must include at least one dish`});
-    if (!quantity)
-        return next({ status: 400, message: `Dish ${index} must have a quantity that is an integer greater than 0`});
-    if (quantity !== "number" || quantity <= 0)
-        return next({ status: 400, message: `Dish ${index} must have a quantity that is an integer greater than 0`});
+    if (!Array.isArray(dishes) || dishes.length <= 0)
+    return next({ status: 400, message: `Order must include at least one dish` });
+    dishes.forEach((dish, index) => {
+    if (
+      !dish.quantity ||
+      dish.quantity <= 0 ||
+      typeof dish.quantity != "number"
+    )
+      return next({ status: 400, message: `Dish ${index} must have a quantity that is an integer greater than 0` });
+  });
     next();
 }
 
@@ -58,12 +62,14 @@ function read(req, res) {
 function update(req, res, next) {
     const { orderId } = req.params;
     let originalOrder = res.locals.order;
-    const { data: { deliverTo, mobileNumber, status, dishes, quantity }} = req.body;
+    const { data: { id, deliverTo, mobileNumber, status, dishes, quantity }} = req.body;
 
     if (id && id !== orderId)
         next({ status: 400, message: `Order id does not match route id. Order: ${id}, Route: ${orderId}.`});
     if (!status || status == "")
         next({ status: 400, message: `Order must have a status of pending, preparing, out-for-delivery, delivered`});
+    if (status === "invalid")
+        next({ status: 400, message: `Order status must be valid` });
     if (status === "delivered")
         next({ status: 400, message: `A delivered order cannot be changed`});
     
@@ -86,7 +92,7 @@ function destroy(req, res, next) {
     
     const index = orders.findIndex((order) => order.id === orderId);
     if (index  > -1) orders.splice(index, 1);
-    res.status(204)
+    res.sendStatus(204);
 };
 
 module.exports = {
