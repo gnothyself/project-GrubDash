@@ -79,14 +79,20 @@ function update(req, res, next) {
     res.json({ data: originalOrder });
 };
 
-function destroy(req, res) {
-
-}
+function destroy(req, res, next) {
+    const { orderId } = req.params;
+    if (res.locals.order.status !== "pending")
+        next({ status: 400, message: `An order cannot be deleted unless it is pending`});
+    
+    const index = orders.findIndex((order) => order.id === orderId);
+    if (index  > -1) orders.splice(index, 1);
+    res.status(204)
+};
 
 module.exports = {
     list,
     create: [orderHasCorrectProps, create],
     read: [orderExists, read],
     update: [orderExists, orderHasCorrectProps, update],
-    delete: []
+    delete: [orderExists, destroy]
 };
